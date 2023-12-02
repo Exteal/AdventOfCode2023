@@ -1,53 +1,13 @@
 import kotlin.math.max
 
 fun main() {
-    fun part1(input : List<String> ) : Int {
-        var correctSum = 0
-        for (game in input) {
 
-            val data =  game.split(':', ';')
-            val gameData = GameData(Integer.parseInt( data[0].filter { c -> c.isDigit() }))
-
-
-            val counts = data.drop(1)
-
-            counts.forEach { m -> m.split(",").forEach{
-                when {
-                    it.contains("red") -> {gameData.updateInfo(it, Colors.Red)}
-                    it.contains("green") -> {gameData.updateInfo(it, Colors.Green)}
-                    it.contains("blue") -> {gameData.updateInfo(it, Colors.Blue)}
-                }
-            }}
-
-            if (!GameData.hasError(gameData)) {
-                correctSum += gameData.getId()
-            }
-
-        }
-        return correctSum
+    fun part1(input : List<String>) : Int {
+        return computeSum(input, predicate = GameData::isValid, method = GameData::getId)
     }
 
     fun part2(input : List<String>) : Int {
-        var setsCount = 0
-        for (game in input) {
-
-            val data =  game.split(':', ';')
-            val gameData = GameData(Integer.parseInt( data[0].filter { c -> c.isDigit() }))
-
-            val counts = data.drop(1)
-
-            counts.forEach {m -> m.split(",").forEach{
-                when {
-                    it.contains("red") -> {gameData.updateInfo(it, Colors.Red)}
-                    it.contains("green") -> {gameData.updateInfo(it, Colors.Green)}
-                    it.contains("blue") -> {gameData.updateInfo(it, Colors.Blue)}
-                }
-            }}
-
-            setsCount += gameData.setPower()
-
-        }
-        return setsCount
+      return computeSum(input, predicate = {_ : GameData -> true}, method = GameData::setPower)
     }
 
     val input = readInput("Day02")
@@ -57,6 +17,31 @@ fun main() {
     println(part2(input))
 }
 
+
+fun computeSum(input: List<String>, predicate: (GameData) -> Boolean, method: (GameData) -> Int) : Int {
+    var sum = 0
+    for (game in input) {
+
+        val data =  game.split(':', ';')
+        val gameData = GameData(Integer.parseInt( data[0].filter { c -> c.isDigit() }))
+
+        val counts = data.drop(1)
+
+        counts.forEach {m -> m.split(",").forEach{
+            when {
+                it.contains("red") -> {gameData.updateInfo(it, Colors.Red)}
+                it.contains("green") -> {gameData.updateInfo(it, Colors.Green)}
+                it.contains("blue") -> {gameData.updateInfo(it, Colors.Blue)}
+            }
+        }}
+        if(predicate(gameData)) {
+            sum += method(gameData)
+        }
+
+    }
+    return sum
+
+}
 enum class Colors {
     Red,
     Green,
@@ -96,5 +81,9 @@ class GameData(private val id: Int) {
 
     fun setPower() : Int {
         return redCount * greenCount * blueCount
+    }
+
+    fun isValid(): Boolean {
+        return !hasError(this)
     }
 }
