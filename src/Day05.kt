@@ -1,28 +1,32 @@
 
 
-fun Long.passThrough(maps : List<Map<Long, Long>>) : Long {
+typealias Range = Triple<Long, Long, Long>
+fun Long.passThrough(maps : List<List<Range>>) : Long {
     var ret = this
-    maps.forEach { map ->
-        ret = map.getOrDefault(ret, ret)
+    maps.forEach Out@ { list ->
+        list.forEach Depth@ {
+            if (ret in it.first..it.first + it.third) {
+                val diff = ret - it.first
+                ret = it.second + diff
+                return@Out
+            }
+        }
     }
     return ret
 }
 fun main() {
-    fun part1(parsed : Parsed) : Long {
-        return  parsed.seeds.map { it.passThrough(parsed.maps) }.minOf { it }
+    fun part1(parsed : ParsedOpt) : Long {
+        return parsed.seeds.map { it.passThrough(parsed.maps) }.minOf { it }
     }
 
-    fun part2(input : Parsed) {
-
+    fun part2(parsed : ParsedOpt) : Long {
+        return parsed.seeds.map { it.passThrough(parsed.maps) }.minOf { it }
     }
 
     val input = readInput("Day05")
 
-    val parsed = parseInput(input)
-    parsed.println()
-
-    val p1 = part1(parsed)
-    p1.println()
+    part1(parseInput(input, method = ::parseSeedsDirect)).println()
+    part2(parseInput(input, method = ::parseSeedsByRange)).println()
 }
 
 fun String.parseWith(start: String) : List<Long> {
@@ -40,30 +44,31 @@ fun categories() : List<String> {
 }
 
 
-fun List<Long>.toRangeTriple() : Triple<Long, Long, Long> {
-    return if (this.size == 3) Triple(this[0], this[1], this[2]) else throw IllegalArgumentException("Bad Format")
+fun List<Long>.toRangeTriple() : Range {
+    return if (this.size == 3) Triple(this[1], this[0], this[2]) else throw IllegalArgumentException("Bad Format")
 }
-fun List<Long>.toRange() : List<Pair<Long, Long>> {
-    if(this.size != 3) throw IllegalArgumentException("Bad Format")
-    val dest = this[0]
-    val source = this[1]
-    val range = this[2]
 
-    val li = mutableListOf<Pair<Long,Long>>()
-    for (it in source until source+range) {
-        li.add(Pair(it, dest + (it - source)))
+
+fun parseSeedsDirect(input : List<String>) : List<Long> {
+    return input[0].parseWith(categories()[0])
+}
+
+fun parseSeedsByRange(input : List<String>) : List<Long> {
+    val vals = input[0].parseWith(categories()[0])
+    val seeds : MutableList<Long> = mutableListOf()
+    for (idx in vals.indices step 2) {
+        seeds.addAll(vals[idx].rangeTo(vals[idx+1]))
     }
-    return li
+    return seeds
 }
-
-fun parseInput(input : List<String>) : Parsed {
+fun parseInput(input : List<String>, method : (List<String>) -> List<Long>) : ParsedOpt {
     var index = 0
-    val seeds =  input[index].parseWith(categories()[index])
-
-    val maps : MutableList<Map<Long, Long>> = mutableListOf()
+    val seeds =  method(input)
+    val maps : MutableList<List<Range>> = mutableListOf()
 
     for (cat in categories().drop(1)) {
-        val map : MutableMap<Long, Long> = mutableMapOf()
+        val map : MutableList<Range> = mutableListOf()
+
         while(input[index++] != cat);
 
         while(index in input.indices && input[index].isNotBlank()) {
@@ -71,22 +76,16 @@ fun parseInput(input : List<String>) : Parsed {
                 break
             }
             val line = input[index].parseLine()
-            //val range = line.toRange()
             val range = line.toRangeTriple()
 
-            for (value in range.first..range.first+range.third) {
-               map[value] = range.second + value - range.first
-            }
-            /*range.forEach {
-                map[it.first] = it.second
-            }*/
+            map.add(range)
             index++
         }
-        maps.add(map.toMap())
+        maps.add(map.toList())
     }
+    return ParsedOpt(seeds, maps.toList())
 
-    return Parsed(seeds, maps.toList())
 }
 
 
-data class Parsed(val seeds : List<Long>, val maps : List<Map<Long, Long>>)
+data class ParsedOpt(val seeds : List<Long>, val maps : List<List<Range>>)
